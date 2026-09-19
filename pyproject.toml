@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cy_pipeflow"
+version = "1.0.0"
+description = "Analytical Hagen-Poiseuille flow of a Carreau-Yasuda fluid (Wang, JNNFM 310 (2022) 104937)"
+readme = "README.md"
+authors = [{ name = "Yanwei Wang" }]
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+keywords = ["rheology", "non-Newtonian", "Carreau-Yasuda", "pipe flow", "Hagen-Poiseuille", "hypergeometric"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Intended Audience :: Science/Research",
+]
+dependencies = ["numpy>=1.22", "scipy>=1.8", "matplotlib>=3.5"]
+
+[project.urls]
+Repository = "https://github.com/ktwyw/carreau-yasuda-pipe-flow"
+Paper = "https://doi.org/10.1016/j.jnnfm.2022.104937"
+Calculator = "https://ktwyw.github.io/carreau-yasuda-pipe-flow/web/"
+
+[project.optional-dependencies]
+gif = ["pillow>=9"]
+test = ["pytest>=7"]
+
+[tool.setuptools]
+packages = ["cy_pipeflow"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
