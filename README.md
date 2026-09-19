@@ -12,6 +12,8 @@ The velocity distribution (Eq. 22) and the average velocity (Eq. 31) are
 closed-form expressions in the Gauss hypergeometric function ₂F₁; the only
 numerical step is solving one nonlinear equation for the wall shear rate (Eq. 4).
 
+**Browser calculator (no installation):** <https://ktwyw.github.io/carreau-yasuda-pipe-flow/web/>
+
 <p align="center"><img src="figures/velocity_profile.png" width="900" alt="velocity, shear-rate and viscosity profiles at G = 0.6 MPa/m"></p>
 
 ## What is here
@@ -23,7 +25,7 @@ numerical step is solving one nonlinear equation for the wall shear rate (Eq. 4)
 | `scripts/flow_rate_curve.py` | Volume flow rate (plus u<sub>avg</sub>, γ̇<sub>wall</sub>, u<sub>max</sub>/u<sub>avg</sub>) vs. pressure gradient for any fluid and range of G |
 | `scripts/velocity_profile.py` | Velocity, shear-rate and viscosity profiles at one pressure gradient |
 | `scripts/dome_animation.py` | Animated 3-D "dome" of the profile as G sweeps up, for lectures |
-| `web/index.html` | Browser calculator: type in the parameters, get the same plots with nothing to install |
+| `web/index.html` | Browser calculator, live at [ktwyw.github.io/carreau-yasuda-pipe-flow/web](https://ktwyw.github.io/carreau-yasuda-pipe-flow/web/) |
 | `tests/` | `pytest` checks: agreement with independent quadrature, Newtonian and power-law limits, inverse problem |
 | `figures/` | Sample output of every script |
 
@@ -94,30 +96,27 @@ directly, without `hyp2f1`; the tests require the two routes to agree to 1e-9.
 
 ## Browser calculator
 
-Open `web/index.html` in a browser. Three tabs: the viscosity curve of the
-fluid; the flow curve over a range of G with CSV export and the inverse
-problem G(Q); and the velocity profile at one G with the local shear rate and
-viscosity, an optional 3-D surface, and the Fig. 3(a)-style plot of the terms
-of Eq. (22).
+**Try it online: <https://ktwyw.github.io/carreau-yasuda-pipe-flow/web/>** — nothing to install.
 
-The calculation runs locally in JavaScript. Browsers have no ₂F₁, so the page
-integrates Eqs. (17) and (26) with composite Gauss–Legendre quadrature on a
-grid graded toward the tube axis; it reproduces the Python results to about
-nine significant figures. Only the plotting library, Plotly.js, is fetched from
-the internet (cdn.plot.ly, with jsDelivr as a fallback).
+Enter the five Carreau–Yasuda parameters and the tube radius, then use the three tabs:
 
-**Offline use:** download
+- **Viscosity curve** — η(γ̇) and the shear stress η(γ̇)·γ̇ of the fluid (Fig. 1 of the paper).
+- **Flow rate vs. pressure gradient** — Q, u<sub>avg</sub>, γ̇<sub>wall</sub> and u<sub>max</sub>/u<sub>avg</sub> over any range of G, with CSV export and the inverse problem (the G that gives a specified Q).
+- **Velocity profile** — u(r), the local shear rate and viscosity at one G, an optional rotatable 3-D surface, and the Fig. 3(a)-style construction of Eq. (22).
+
+The same page is in this repository as `web/index.html`; download it and open it in
+any browser to run it locally. All calculations run in your browser in
+JavaScript. Browsers have no ₂F₁, so the page integrates Eqs. (17) and (26)
+with composite Gauss–Legendre quadrature on a grid graded toward the tube axis,
+which reproduces the Python results to about nine significant figures. Only the
+plotting library, Plotly.js, is loaded from a CDN (cdn.plot.ly, with jsDelivr as
+a fallback).
+
+If the page reports that the plotting library could not be loaded, it was opened
+somewhere that blocks external scripts (an e-mail or chat preview, a locked-down
+network). Open the file directly in a browser, or for fully offline use download
 [plotly-2.35.2.min.js](https://cdn.plot.ly/plotly-2.35.2.min.js), save it as
-`web/plotly.min.js`, and the page picks it up automatically.
-
-**"Plotly is not defined" / "plotting library could not be loaded":** the page
-was opened somewhere that blocks external scripts (an in-chat or e-mail preview,
-a locked-down network). Open the file directly in a browser, or use the local
-copy of Plotly described above.
-
-**Hosting it:** enable GitHub Pages for this repository (Settings → Pages →
-Deploy from branch `main`, folder `/ (root)`); the calculator is then live at
-`https://ktwyw.github.io/carreau-yasuda-pipe-flow/web/`.
+`web/plotly.min.js` next to the page, and reload.
 
 ## Reproduced figures
 
