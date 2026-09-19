@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper it implements (preferred-citation) and, optionally, the software itself."
+title: "cy_pipeflow: analytical Hagen-Poiseuille flow of a Carreau-Yasuda fluid"
+type: software
+version: 1.0.0
+date-released: 2026-09-19
+license: MIT
+repository-code: "https://github.com/ktwyw/carreau-yasuda-pipe-flow"
+authors:
+  - family-names: Wang
+    given-names: Yanwei
+    affiliation: "Nazarbayev University"
+preferred-citation:
+  type: article
+  title: "Steady isothermal flow of a Carreau-Yasuda model fluid in a straight circular tube"
+  authors:
+    - family-names: Wang
+      given-names: Yanwei
+  journal: "Journal of Non-Newtonian Fluid Mechanics"
+  volume: 310
+  year: 2022
+  start: 104937
+  doi: 10.1016/j.jnnfm.2022.104937

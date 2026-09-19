@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carreau–Yasuda pipe flow calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fcfcfa;
+    --ink: #1b2a41;
+    --slate: #5b6b82;
+    --rule: #d9dee5;
+    --panel: #f3f5f2;
+    --red: #b3261e;
+    --blue: #1f4e9b;
+    --green: #2f6b3a;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 1rem; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--serif); font-size: 16px; line-height: 1.55;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  /* ---- masthead, in the manner of a journal article ------------------ */
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 22px; }
+  header h1 { font-size: 1.85rem; font-weight: 600; margin: 0 0 6px; line-height: 1.2; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--slate); max-width: 72ch; }
+  header a { color: var(--blue); }
+
+  /* ---- two-column body ---------------------------------------------- */
+  .body { display: grid; grid-template-columns: 330px 1fr; gap: 32px; align-items: start; }
+  @media (max-width: 860px) { .body { grid-template-columns: 1fr; } }
+
+  aside { position: sticky; top: 16px; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 10px; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 22px 0 8px; }
+  .hint { color: var(--slate); font-size: 0.9rem; margin: 6px 0 0; }
+
+  /* the parameter list mirrors the paper's "List of Symbols" */
+  table.symbols { width: 100%; border-collapse: collapse; }
+  table.symbols td { padding: 5px 4px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+  table.symbols td.sym { width: 44px; font-style: italic; font-size: 1.05rem; }
+  table.symbols td.meaning { color: var(--slate); font-size: 0.86rem; line-height: 1.25; }
+  table.symbols td.val { width: 96px; text-align: right; }
+  table.symbols td.unit { width: 52px; color: var(--slate); font-size: 0.9rem; padding-left: 6px; }
+  input[type=number], select {
+    width: 100%; font: inherit; font-size: 0.95rem; color: var(--ink);
+    padding: 4px 6px; border: 1px solid #b9c1cc; border-radius: 4px; background: #fff; text-align: right;
+  }
+  select { text-align: left; }
+  input:focus-visible, select:focus-visible, button:focus-visible, .tab:focus-visible {
+    outline: 2px solid var(--blue); outline-offset: 2px;
+  }
+  input:invalid { border-color: var(--red); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; margin: 10px 0 14px; }
+  .field { display: flex; flex-direction: column; gap: 3px; min-width: 120px; }
+  .field label { font-size: 0.86rem; color: var(--slate); }
+  .field label i { font-size: 1rem; color: var(--ink); }
+  .field input, .field select { width: 150px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 0.92rem; }
+
+  button {
+    font: inherit; font-size: 0.95rem; cursor: pointer; border-radius: 4px;
+    padding: 7px 16px; border: 1px solid var(--ink); background: var(--ink); color: #fff;
+  }
+  button.quiet { background: transparent; color: var(--ink); }
+  button:hover { filter: brightness(1.12); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 18px; }
+  .tab {
+    font: inherit; font-size: 0.98rem; background: none; border: 0; border-bottom: 3px solid transparent;
+    color: var(--slate); padding: 8px 14px 6px; margin-bottom: -1px; border-radius: 0; cursor: pointer;
+  }
+  .tab[aria-selected=true] { color: var(--ink); border-bottom-color: var(--red); font-weight: 600; }
+  .tab:hover { filter: none; color: var(--ink); }
+  section[role=tabpanel][hidden] { display: none; }
+
+  /* results in the manner of Table 2 */
+  table.results { border-collapse: collapse; margin: 10px 0 4px; min-width: 320px; }
+  table.results th, table.results td { text-align: left; padding: 4px 14px 4px 0; font-weight: 400; }
+  table.results thead th { border-bottom: 1px solid var(--ink); color: var(--slate); font-size: 0.86rem; }
+  table.results td.num { text-align: right; }
+  table.results td.unit { color: var(--slate); font-size: 0.9rem; }
+  table.results tbody tr:last-child td { border-bottom: 1px solid var(--ink); }
+  table.results caption { text-align: left; caption-side: top; font-size: 0.88rem; color: var(--slate); padding-bottom: 4px; }
+
+  .figs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; margin-top: 14px; }
+  @media (max-width: 700px) { .figs { grid-template-columns: 1fr; } }
+  .fig { min-width: 0; }
+  .fig.wide { grid-column: 1 / -1; }
+  .plot { width: 100%; height: 330px; }
+  .plot.tall { height: 460px; }
+  figcaption { font-size: 0.88rem; color: var(--slate); margin-top: 2px; max-width: 70ch; }
+
+  .error { color: var(--red); font-size: 0.92rem; margin: 6px 0; min-height: 1.2em; }
+  footer { margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 12px; color: var(--slate); font-size: 0.88rem; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+<div id="libStatus" class="error" role="status" hidden></div>
+<script>
+/* Load Plotly from the first reachable source; the UI waits for it. */
+(function () {
+  const sources = [
+    "https://cdn.plot.ly/plotly-2.35.2.min.js",                              // official Plotly CDN
+    "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js", // fallback
+    "plotly.min.js",                                                          // local copy next to this file (offline use)
+  ];
+  const ready = [];
+  window.whenPlotlyReady = fn => (window.Plotly ? fn() : ready.push(fn));
+  (function tryNext(i) {
+    if (i >= sources.length) {
+      const el = document.getElementById("libStatus");
+      el.hidden = false;
+      el.innerHTML = "The plotting library (Plotly.js) could not be loaded, so no figures can be drawn. " +
+        "This page fetches it from the internet the first time it is opened. If you are offline or the CDN is blocked, " +
+        "download <a href='https://cdn.plot.ly/plotly-2.35.2.min.js'>plotly-2.35.2.min.js</a>, save it as " +
+        "<code>plotly.min.js</code> in the same folder as this page, and reload. " +
+        "If you are viewing this inside a chat or file preview, open the file directly in your browser instead.";
+      return;
+    }
+    const sc = document.createElement("script");
+    sc.src = sources[i];
+    sc.onload = () => { if (window.Plotly) ready.splice(0).forEach(fn => fn()); else tryNext(i + 1); };
+    sc.onerror = () => tryNext(i + 1);
+    document.head.appendChild(sc);
+  })(0);
+})();
+</script>
+<header>
+  <h1>Hagen–Poiseuille flow of a Carreau–Yasuda fluid</h1>
+  <p>Interactive companion to Y. Wang, <i>Steady isothermal flow of a Carreau–Yasuda model fluid in a straight circular tube</i>,
+  J. Non-Newtonian Fluid Mech. 310 (2022) 104937, <a href="https://doi.org/10.1016/j.jnnfm.2022.104937">doi:10.1016/j.jnnfm.2022.104937</a>.
+  Enter the fluid and tube on the left, then compute the flow curve or a velocity profile. Everything runs in your browser.</p>
+</header>
+
+<div class="body">
+<aside>
+  <h2>Fluid and tube</h2>
+  <table class="symbols" aria-label="Fluid and tube parameters">
+    <tr><td class="sym">η<sub>0</sub></td><td class="meaning">zero-shear-rate viscosity</td>
+        <td class="val"><input id="eta0" type="number" step="any" min="0" value="1400" aria-label="eta 0"></td><td class="unit">Pa·s</td></tr>
+    <tr><td class="sym">η<sub>∞</sub></td><td class="meaning">infinite-shear-rate viscosity</td>
+        <td class="val"><input id="etainf" type="number" step="any" min="0" value="0" aria-label="eta infinity"></td><td class="unit">Pa·s</td></tr>
+    <tr><td class="sym">λ</td><td class="meaning">time constant</td>
+        <td class="val"><input id="lam" type="number" step="any" min="0" value="1.6" aria-label="lambda"></td><td class="unit">s</td></tr>
+    <tr><td class="sym">n</td><td class="meaning">power-law exponent</td>
+        <td class="val"><input id="n" type="number" step="any" min="0" value="0.2" aria-label="n"></td><td class="unit">–</td></tr>
+    <tr><td class="sym">a</td><td class="meaning">Yasuda transition parameter (2 = Carreau model)</td>
+        <td class="val"><input id="a" type="number" step="any" min="0" value="1.25" aria-label="a"></td><td class="unit">–</td></tr>
+    <tr><td class="sym">R</td><td class="meaning">tube radius</td>
+        <td class="val"><input id="R" type="number" step="any" min="0" value="0.01" aria-label="R"></td><td class="unit">m</td></tr>
+  </table>
+  <div class="actions">
+    <button class="quiet" id="preset" type="button">Reset to the paper's example fluid</button>
+  </div>
+  <p class="hint">Pressure gradients below are in Pa/m; the paper's plots run from 0 to 1 MPa/m = 1 000 000 Pa/m.</p>
+  <div class="error" id="fluidError" role="alert"></div>
+</aside>
+
+<div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="tab-rheo" id="btn-rheo" type="button">Viscosity curve</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-flow" id="btn-flow" type="button">Flow rate vs. pressure gradient</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-prof" id="btn-prof" type="button">Velocity profile</button>
+  </div>
+
+  <!-- ---------------- Tab 1: rheology ---------------------------------- -->
+  <section id="tab-rheo" role="tabpanel" aria-labelledby="btn-rheo">
+    <div class="row">
+      <div class="field"><label for="gdmin">smallest shear rate, s<sup>−1</sup></label><input id="gdmin" type="number" step="any" value="0.003"></div>
+      <div class="field"><label for="gdmax">largest shear rate, s<sup>−1</sup></label><input id="gdmax" type="number" step="any" value="3000"></div>
+      <button id="runRheo" type="button">Draw viscosity curve</button>
+    </div>
+    <div class="error" id="rheoError" role="alert"></div>
+    <div class="figs">
+      <figure class="fig"><div class="plot" id="plotEta"></div><figcaption>Shear viscosity η(γ̇), Eq. (1).</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotTau"></div><figcaption>Shear stress η(γ̇)·γ̇. For a given G and R the wall shear rate is where this curve equals τ<sub>wall</sub> = GR/2, Eq. (4).</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ---------------- Tab 2: flow curve --------------------------------- -->
+  <section id="tab-flow" role="tabpanel" aria-labelledby="btn-flow" hidden>
+    <div class="row">
+      <div class="field"><label for="Gmin"><i>G</i><sub>min</sub>, Pa/m</label><input id="Gmin" type="number" step="any" value="5000"></div>
+      <div class="field"><label for="Gmax"><i>G</i><sub>max</sub>, Pa/m</label><input id="Gmax" type="number" step="any" value="1000000"></div>
+      <div class="field"><label for="nG">number of points</label><input id="nG" type="number" step="1" min="2" max="2000" value="80"></div>
+      <div class="field"><label for="spacing">spacing and axes</label>
+        <select id="spacing"><option value="log">logarithmic</option><option value="lin">linear</option></select></div>
+      <button id="runFlow" type="button">Compute flow curve</button>
+    </div>
+    <div class="error" id="flowError" role="alert"></div>
+    <table class="results" id="flowTable" hidden>
+      <caption>At the two ends of the range</caption>
+      <thead><tr><th>Quantity</th><th>at <i>G</i><sub>min</sub></th><th>at <i>G</i><sub>max</sub></th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="actions"><button class="quiet" id="csvFlow" type="button" hidden>Download flow curve as CSV</button></div>
+    <div class="figs">
+      <figure class="fig"><div class="plot" id="plotQ"></div><figcaption>Volume flow rate Q = πR³ γ̇<sub>wall</sub> ũ<sub>avg</sub>, Eqs. (24) and (31).</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotUavg"></div><figcaption>Average velocity u<sub>avg</sub> = Q/(πR²).</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotGw"></div><figcaption>Wall shear rate from Eq. (4).</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotRatio"></div><figcaption>u<sub>max</sub>/u<sub>avg</sub>: 2 for a parabola, (3n+1)/(n+1) in the power-law limit.</figcaption></figure>
+    </div>
+
+    <h3>Inverse problem: pressure gradient for a given flow rate</h3>
+    <div class="row">
+      <div class="field"><label for="Qtarget"><i>Q</i>, m³/s</label><input id="Qtarget" type="number" step="any" value="1e-4"></div>
+      <button id="runInverse" type="button">Find <i>G</i></button>
+      <span id="inverseOut"></span>
+    </div>
+  </section>
+
+  <!-- ---------------- Tab 3: velocity profile --------------------------- -->
+  <section id="tab-prof" role="tabpanel" aria-labelledby="btn-prof" hidden>
+    <div class="row">
+      <div class="field"><label for="Gprof"><i>G</i>, pressure drop per unit length, Pa/m</label><input id="Gprof" type="number" step="any" value="600000"></div>
+      <label class="check"><input id="showDome" type="checkbox"> 3-D surface</label>
+      <label class="check"><input id="showTerms" type="checkbox"> terms of Eq. (22)</label>
+      <button id="runProf" type="button">Compute profile</button>
+    </div>
+    <div class="error" id="profError" role="alert"></div>
+    <table class="results" id="profTable" hidden>
+      <caption>Integral quantities</caption>
+      <thead><tr><th>Quantity</th><th>Value</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="actions"><button class="quiet" id="csvProf" type="button" hidden>Download profile as CSV</button></div>
+    <div class="figs">
+      <figure class="fig wide"><div class="plot tall" id="plotU"></div><figcaption>Velocity distribution across the diameter from the parametric solution, Eq. (22). The dashed parabola is the Newtonian profile with the same flow rate.</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotGamma"></div><figcaption>Local shear rate γ̇(r) = s γ̇<sub>wall</sub>; it is zero on the axis and largest at the wall.</figcaption></figure>
+      <figure class="fig"><div class="plot" id="plotEtaR"></div><figcaption>Local viscosity η(r): the fluid is thinnest at the wall.</figcaption></figure>
+      <figure class="fig wide" id="figTerms" hidden><div class="plot" id="plotTerms"></div><figcaption>The construction of Fig. 3(a): for each s the velocity ũ is the gap (shaded) between 1 − s r̃(s) and w(s), while r̃(s) gives the radius where it applies.</figcaption></figure>
+      <figure class="fig wide" id="figDome" hidden><div class="plot tall" id="plotDome"></div><figcaption>The profile revolved about the tube axis. Drag to rotate.</figcaption></figure>
+    </div>
+  </section>
+</div>
+</div>
+
+<footer>
+  The Python package in this repository evaluates the closed-form hypergeometric expressions of the paper (Eqs. 18, 23, 31) with SciPy.
+  This page has no special-function library, so it integrates Eqs. (17) and (26) directly with composite 5-point Gauss–Legendre quadrature on 400 panels graded toward the tube axis;
+  the two agree to about nine significant figures, well beyond what any plot can show. The wall shear rate, Eq. (4), is found by bisection in log γ̇.
+  Source code, Python package and scripts: <a href="https://github.com/ktwyw/carreau-yasuda-pipe-flow">github.com/ktwyw/carreau-yasuda-pipe-flow</a> (MIT License).
+</footer>
+</main>
+
+<script id="core">
+/* ================================================================
+   Numerical core -- Wang, JNNFM 310 (2022) 104937, in plain JS.
+   All quantities SI.  fluid = {eta0, etainf, lam, n, a}.
+   ================================================================ */
+const CY = (() => {
+  const GLX = [-0.9061798459386640, -0.5384693101056831, 0, 0.5384693101056831, 0.9061798459386640];
+  const GLW = [0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891];
+
+  function viscosity(g, f) {                                            // Eq. (1)
+    return f.etainf + (f.eta0 - f.etainf) * Math.pow(1 + Math.pow(f.lam * g, f.a), (f.n - 1) / f.a);
+  }
+  function wallShearRate(G, R, f) {                                     // Eq. (4)
+    const tau = 0.5 * G * R;
+    const res = lg => viscosity(Math.pow(10, lg), f) * Math.pow(10, lg) - tau;
+    let lo = Math.log10(tau / f.eta0) - 1e-9;                           // eta <= eta0  -> gamma_w >= tau/eta0
+    let hi = f.etainf > 0 ? Math.log10(tau / f.etainf) + 1e-9 : lo + 1;  // eta >= eta_inf -> gamma_w <= tau/eta_inf
+    while (f.etainf === 0 && res(hi) < 0) hi += 1;
+    for (let i = 0; i < 200 && hi - lo > 1e-15; i++) {
+      const mid = 0.5 * (lo + hi);
+      if (res(mid) < 0) lo = mid; else hi = mid;
+    }
+    return Math.pow(10, 0.5 * (lo + hi));
+  }
+  // panel edges on [0,1], graded toward s = 0 where the viscosity plateau
+  // ends at s ~ 1/lambda_tilde (which can be very small at large G)
+  const edge = (k, N) => Math.pow(k / N, 3);
+  // integral of fn over each of the N panels
+  function panels(fn, N) {
+    const out = new Float64Array(N);
+    for (let k = 0; k < N; k++) {
+      const a = edge(k, N), b = edge(k + 1, N), mid = 0.5 * (a + b), half = 0.5 * (b - a); let s = 0;
+      for (let j = 0; j < 5; j++) s += GLW[j] * fn(mid + half * GLX[j]);
+      out[k] = half * s;
+    }
+    return out;
+  }
+  function reduced(G, R, f) {                                            // Table 1, Eq. (6)
+    const gw = wallShearRate(G, R, f), etaW = viscosity(gw, f);
+    return { gw, etaW, e0t: f.eta0 / etaW, eit: f.etainf / etaW, lt: f.lam * gw };
+  }
+  function etaTilde(s, rp, f) {                                          // Eq. (9)
+    return rp.eit + (rp.e0t - rp.eit) * Math.pow(1 + Math.pow(rp.lt * s, f.a), (f.n - 1) / f.a);
+  }
+  const rTilde = (s, rp, f) => s * etaTilde(s, rp, f);                  // Eq. (8)
+
+  // integral quantities only (fast path for flow curves)
+  function integral(G, R, f, N = 400) {
+    const rp = reduced(G, R, f);
+    const w0 = panels(x => x * etaTilde(x, rp, f), N).reduce((p, q) => p + q, 0);       // w(0), Eq. (17)
+    const i3 = panels(x => Math.pow(rTilde(x, rp, f), 3), N).reduce((p, q) => p + q, 0); // Eq. (27)
+    const umt = 1 - w0, uat = (1 - i3) / 3;                                              // Eqs. (23), (31)
+    const scale = R * rp.gw;
+    return { G, R, gammaWall: rp.gw, etaWall: rp.etaW, tauWall: 0.5 * G * R,
+             uMax: scale * umt, uAvg: scale * uat, Q: Math.PI * R ** 3 * rp.gw * uat,
+             uMaxT: umt, uAvgT: uat, ratio: umt / uat };
+  }
+  // full parametric profile, Eq. (22), on the graded s grid
+  function profile(G, R, f, N = 400) {
+    const rp = reduced(G, R, f);
+    const I = panels(x => x * etaTilde(x, rp, f), N);
+    const s = new Float64Array(N + 1), rt = new Float64Array(N + 1), ut = new Float64Array(N + 1), w = new Float64Array(N + 1);
+    w[N] = 0;
+    for (let k = N - 1; k >= 0; k--) w[k] = w[k + 1] + I[k];
+    for (let k = 0; k <= N; k++) { s[k] = edge(k, N); rt[k] = rTilde(s[k], rp, f); ut[k] = 1 - s[k] * rt[k] - w[k]; }
+    const res = integral(G, R, f, N);
+    const scale = R * rp.gw;
+    return { s, rt, ut, w, r: rt.map(v => R * v), u: ut.map(v => scale * v),
+             gamma: s.map(v => rp.gw * v), eta: s.map(v => viscosity(rp.gw * v, f)), tau: rt.map(v => res.tauWall * v), res };
+  }
+  // inverse problem: G for a given Q, bracketed by the two Newtonian estimates
+  function pressureGradientFromQ(Q, R, f) {
+    const Ghi = 8 * f.eta0 * Q / (Math.PI * R ** 4);
+    let lo = Math.log10(Math.max(8 * f.etainf * Q / (Math.PI * R ** 4), 1e-12 * Ghi)), hi = Math.log10(Ghi) + 1e-9;
+    for (let i = 0; i < 120 && hi - lo > 1e-13; i++) {
+      const mid = 0.5 * (lo + hi);
+      if (integral(Math.pow(10, mid), R, f).Q < Q) lo = mid; else hi = mid;
+    }
+    return Math.pow(10, 0.5 * (lo + hi));
+  }
+  return { viscosity, wallShearRate, integral, profile, pressureGradientFromQ };
+})();
+</script>
+
+<script>
+/* ================================================================ UI */
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value);
+const fmt = (x, p = 4) => (x === 0 ? "0" : (Math.abs(x) >= 1e4 || Math.abs(x) < 1e-3) ? x.toExponential(p - 1) : x.toPrecision(p));
+const PLOT_FONT = { family: '"Source Serif 4", Georgia, serif', size: 13, color: "#1b2a41" };
+const AXIS = { linecolor: "#1b2a41", linewidth: 1, mirror: true, ticks: "outside", gridcolor: "#e8ebef", zeroline: false };
+function layout(xt, yt, extra = {}) {
+  return Object.assign({
+    margin: { l: 62, r: 14, t: 12, b: 48 }, font: PLOT_FONT, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "#fff",
+    xaxis: Object.assign({ title: { text: xt } }, AXIS), yaxis: Object.assign({ title: { text: yt } }, AXIS),
+    showlegend: false,
+  }, extra);
+}
+const CONFIG = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["select2d", "lasso2d"] };
+function plot(id, data, lay, cfg) {
+  if (!window.Plotly) throw new Error("The plotting library has not loaded yet (see the note at the top of the page).");
+  Plotly.react(id, data, lay, cfg);
+}
+
+function readFluid() {
+  const f = { eta0: num("eta0"), etainf: num("etainf"), lam: num("lam"), n: num("n"), a: num("a") };
+  const R = num("R");
+  const bad = [];
+  if (!(f.eta0 > 0)) bad.push("η0 must be positive");
+  if (!(f.etainf >= 0 && f.etainf < f.eta0)) bad.push("η∞ must satisfy 0 ≤ η∞ < η0");
+  if (!(f.lam > 0)) bad.push("λ must be positive");
+  if (!(f.n > 0)) bad.push("n must be positive");
+  if (!(f.a > 0)) bad.push("a must be positive");
+  if (!(R > 0)) bad.push("R must be positive");
+  $("fluidError").textContent = bad.join("; ");
+  if (bad.length) throw new Error(bad.join("; "));
+  return { f, R };
+}
+function fluidTitle(f, R) {
+  return `η0 = ${f.eta0} Pa·s, η∞ = ${f.etainf} Pa·s, λ = ${f.lam} s, n = ${f.n}, a = ${f.a}; R = ${R} m`;
+}
+function downloadCSV(name, header, cols) {
+  const rows = [header];
+  for (let i = 0; i < cols[0].length; i++) rows.push(cols.map(c => c[i].toPrecision(10)).join(","));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([rows.join("\n") + "\n"], { type: "text/csv" }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function fillTable(tbody, rows) {
+  tbody.innerHTML = rows.map(r => `<tr><td>${r[0]}</td>` + r.slice(1, -1).map(v => `<td class="num">${v}</td>`).join("") + `<td class="unit">${r[r.length - 1]}</td></tr>`).join("");
+}
+function guard(errId, fn) { try { $(errId).textContent = ""; fn(); } catch (e) { $(errId).textContent = e.message; } }
+
+/* ---- tabs ---- */
+document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b === btn));
+  document.querySelectorAll("section[role=tabpanel]").forEach(s => s.hidden = s.id !== btn.getAttribute("aria-controls"));
+  window.dispatchEvent(new Event("resize"));            // let Plotly re-measure the now-visible panel
+}));
+
+$("preset").addEventListener("click", () => {
+  Object.entries({ eta0: 1400, etainf: 0, lam: 1.6, n: 0.2, a: 1.25, R: 0.01 }).forEach(([k, v]) => $(k).value = v);
+  $("fluidError").textContent = "";
+});
+
+/* ---- tab 1: rheology ---- */
+$("runRheo").addEventListener("click", () => guard("rheoError", () => {
+  const { f, R } = readFluid();
+  const g0 = num("gdmin"), g1 = num("gdmax");
+  if (!(g0 > 0 && g1 > g0)) throw new Error("Shear-rate range must be positive and increasing");
+  const g = Array.from({ length: 300 }, (_, i) => g0 * Math.pow(g1 / g0, i / 299));
+  const eta = g.map(v => CY.viscosity(v, f));
+  plot("plotEta", [{ x: g, y: eta, mode: "lines", line: { color: "#1b2a41", width: 2 } }],
+    layout("shear rate γ̇, s⁻¹", "viscosity η, Pa·s", { xaxis: Object.assign({ type: "log", title: { text: "shear rate γ̇, s⁻¹" } }, AXIS), yaxis: Object.assign({ type: "log", title: { text: "viscosity η, Pa·s" } }, AXIS) }), CONFIG);
+  plot("plotTau", [{ x: g, y: eta.map((e, i) => e * g[i]), mode: "lines", line: { color: "#1b2a41", width: 2 } }],
+    layout("", "", { xaxis: Object.assign({ type: "log", title: { text: "shear rate γ̇, s⁻¹" } }, AXIS), yaxis: Object.assign({ type: "log", title: { text: "shear stress η γ̇, Pa" } }, AXIS) }), CONFIG);
+}));
+
+/* ---- tab 2: flow curve ---- */
+let flowData = null;
+$("runFlow").addEventListener("click", () => guard("flowError", () => {
+  const { f, R } = readFluid();
+  const G0 = num("Gmin"), G1 = num("Gmax"), N = Math.round(num("nG")), logsp = $("spacing").value === "log";
+  if (!(G0 > 0 && G1 > G0)) throw new Error("G range must be positive and increasing");
+  if (!(N >= 2 && N <= 2000)) throw new Error("Number of points must be between 2 and 2000");
+  const G = Array.from({ length: N }, (_, i) => logsp ? G0 * Math.pow(G1 / G0, i / (N - 1)) : G0 + (G1 - G0) * i / (N - 1));
+  const res = G.map(g => CY.integral(g, R, f));
+  flowData = { G, res };
+  const col = k => res.map(r => r[k]);
+  const ax = (t, log) => Object.assign({ title: { text: t }, type: log ? "log" : "linear" }, AXIS);
+  const L = (yt, ylog) => layout("", "", { xaxis: ax("pressure gradient G, Pa/m", logsp), yaxis: ax(yt, ylog) });
+  plot("plotQ", [{ x: G, y: col("Q"), mode: "lines", line: { color: "#b3261e", width: 2.4 } }], L("flow rate Q, m³/s", logsp), CONFIG);
+  plot("plotUavg", [{ x: G, y: col("uAvg"), mode: "lines", line: { color: "#1f4e9b", width: 2.4 } }], L("average velocity u_avg, m/s", logsp), CONFIG);
+  plot("plotGw", [{ x: G, y: col("gammaWall"), mode: "lines", line: { color: "#2f6b3a", width: 2.4 } }], L("wall shear rate, s⁻¹", logsp), CONFIG);
+  const pl = (3 * f.n + 1) / (f.n + 1);
+  plot("plotRatio", [
+    { x: G, y: col("ratio"), mode: "lines", line: { color: "#1b2a41", width: 2.4 } },
+    { x: [G0, G1], y: [2, 2], mode: "lines", line: { color: "#9aa4b2", width: 1, dash: "dot" } },
+    { x: [G0, G1], y: [pl, pl], mode: "lines", line: { color: "#9aa4b2", width: 1, dash: "dot" } },
+  ], L("u_max / u_avg", false), CONFIG);
+  const a = res[0], b = res[N - 1];
+  fillTable($("flowTable").querySelector("tbody"), [
+    ["pressure gradient G", fmt(a.G), fmt(b.G), "Pa/m"],
+    ["flow rate Q", fmt(a.Q), fmt(b.Q), "m³/s"],
+    ["average velocity", fmt(a.uAvg), fmt(b.uAvg), "m/s"],
+    ["centreline velocity", fmt(a.uMax), fmt(b.uMax), "m/s"],
+    ["wall shear rate", fmt(a.gammaWall), fmt(b.gammaWall), "s⁻¹"],
+    ["wall viscosity", fmt(a.etaWall), fmt(b.etaWall), "Pa·s"],
+    ["u_max / u_avg", fmt(a.ratio), fmt(b.ratio), `2 → ${pl.toFixed(4)}`],
+  ]);
+  $("flowTable").hidden = false; $("csvFlow").hidden = false;
+}));
+$("csvFlow").addEventListener("click", () => {
+  if (!flowData) return;
+  const r = flowData.res, c = k => r.map(x => x[k]);
+  downloadCSV("flow_rate_curve.csv", "G[Pa/m],Q[m^3/s],u_avg[m/s],u_max[m/s],gamma_wall[1/s],eta_wall[Pa s],tau_wall[Pa],u_max/u_avg,u_max_tilde,u_avg_tilde",
+    [c("G"), c("Q"), c("uAvg"), c("uMax"), c("gammaWall"), c("etaWall"), c("tauWall"), c("ratio"), c("uMaxT"), c("uAvgT")]);
+});
+$("runInverse").addEventListener("click", () => guard("flowError", () => {
+  const { f, R } = readFluid();
+  const Q = num("Qtarget");
+  if (!(Q > 0)) throw new Error("Q must be positive");
+  const G = CY.pressureGradientFromQ(Q, R, f), r = CY.integral(G, R, f);
+  $("inverseOut").innerHTML = `<i>G</i> = <b>${fmt(G, 5)} Pa/m</b> &nbsp;(wall shear rate ${fmt(r.gammaWall)} s⁻¹, u<sub>avg</sub> = ${fmt(r.uAvg)} m/s)`;
+}));
+
+/* ---- tab 3: profile ---- */
+let profData = null;
+$("runProf").addEventListener("click", () => guard("profError", () => {
+  const { f, R } = readFluid();
+  const G = num("Gprof");
+  if (!(G > 0)) throw new Error("G must be positive");
+  const p = CY.profile(G, R, f), res = p.res;
+  profData = p;
+  const rev = arr => Array.from(arr).reverse();
+  const rmm = Array.from(p.r, v => 1e3 * v), umm = Array.from(p.u);
+  const rr = Array.from({ length: 201 }, (_, i) => -R + 2 * R * i / 200);
+  plot("plotU", [
+    { x: rev(rmm).map(v => -v).concat(rmm), y: rev(umm).concat(umm), mode: "lines", name: "Carreau–Yasuda", line: { color: "#b3261e", width: 2.6 } },
+    { x: rr.map(v => 1e3 * v), y: rr.map(v => 2 * res.uAvg * (1 - (v / R) ** 2)), mode: "lines", name: "Newtonian, same Q", line: { color: "#8a93a0", width: 1.4, dash: "dash" } },
+  ], layout("radial position r, mm", "axial velocity u(r), m/s", { showlegend: true, legend: { x: 0.02, y: 0.98, bgcolor: "rgba(255,255,255,0.7)" }, yaxis: Object.assign({ title: { text: "axial velocity u(r), m/s" }, rangemode: "tozero" }, AXIS) }), CONFIG);
+  plot("plotGamma", [{ x: rmm, y: Array.from(p.gamma), mode: "lines", line: { color: "#1f4e9b", width: 2.4 } }],
+    layout("radial position r, mm", "shear rate γ̇(r), s⁻¹", { yaxis: Object.assign({ title: { text: "shear rate γ̇(r), s⁻¹" }, rangemode: "tozero" }, AXIS) }), CONFIG);
+  plot("plotEtaR", [{ x: rmm, y: Array.from(p.eta), mode: "lines", line: { color: "#2f6b3a", width: 2.4 } }],
+    layout("radial position r, mm", "", { yaxis: Object.assign({ title: { text: "viscosity η(r), Pa·s" }, type: "log" }, AXIS) }), CONFIG);
+
+  $("figTerms").hidden = !$("showTerms").checked;
+  if ($("showTerms").checked) {
+    const s = Array.from(p.s), one = s.map((v, i) => 1 - v * p.rt[i]);
+    plot("plotTerms", [
+      { x: s, y: Array.from(p.w), mode: "lines", name: "w(s)", line: { color: "#1f4e9b", width: 2 } },
+      { x: s, y: one, mode: "lines", name: "1 − s r̃(s)", fill: "tonexty", fillcolor: "rgba(31,78,155,0.12)", line: { color: "#1b2a41", width: 2 } },
+      { x: s, y: Array.from(p.rt), mode: "lines", name: "r̃(s)", line: { color: "#b3261e", width: 2 } },
+    ], layout("reduced shear rate s = γ̇ / γ̇_wall", "", { showlegend: true, legend: { x: 0.02, y: 0.98 }, yaxis: Object.assign({ range: [0, 1.02] }, AXIS) }), CONFIG);
+  }
+  $("figDome").hidden = !$("showDome").checked;
+  if ($("showDome").checked) {
+    const step = 4, NT = 61, th = Array.from({ length: NT }, (_, j) => 2 * Math.PI * j / (NT - 1));
+    const X = [], Y = [], Z = [];
+    for (let k = 0; k <= 400; k += step) { X.push(th.map(t => p.rt[k] * Math.cos(t))); Y.push(th.map(t => p.rt[k] * Math.sin(t))); Z.push(th.map(() => p.u[k])); }
+    plot("plotDome", [{ type: "surface", x: X, y: Y, z: Z, colorscale: "Viridis", showscale: true, colorbar: { title: { text: "u, m/s" }, len: 0.6 },
+      contours: { z: { show: true, usecolormap: false, color: "rgba(0,0,0,0.25)", width: 1 } } }],
+      { margin: { l: 0, r: 0, t: 0, b: 0 }, font: PLOT_FONT, paper_bgcolor: "rgba(0,0,0,0)",
+        scene: { xaxis: { title: { text: "x/R" } }, yaxis: { title: { text: "y/R" } }, zaxis: { title: { text: "u, m/s" }, rangemode: "tozero" },
+                 aspectratio: { x: 1, y: 1, z: 0.6 }, camera: { eye: { x: 1.5, y: -1.5, z: 0.8 } } } }, CONFIG);
+  }
+  fillTable($("profTable").querySelector("tbody"), [
+    ["wall shear stress τ_wall = GR/2", fmt(res.tauWall), "Pa"],
+    ["wall shear rate", fmt(res.gammaWall), "s⁻¹"],
+    ["wall viscosity", fmt(res.etaWall), "Pa·s"],
+    ["centreline velocity u_max", fmt(res.uMax), "m/s"],
+    ["average velocity u_avg", fmt(res.uAvg), "m/s"],
+    ["flow rate Q", `${fmt(res.Q)} m³/s = ${fmt(1e6 * res.Q)}`, "mL/s"],
+    ["u_max / u_avg", fmt(res.ratio), `2 → ${((3 * f.n + 1) / (f.n + 1)).toFixed(4)}`],
+    ["reduced ũ_max, ũ_avg", `${res.uMaxT.toFixed(6)}, ${res.uAvgT.toFixed(6)}`, "0.5, 0.25 if Newtonian"],
+  ]);
+  $("profTable").hidden = false; $("csvProf").hidden = false;
+  window.dispatchEvent(new Event("resize"));
+}));
+$("csvProf").addEventListener("click", () => {
+  if (!profData) return;
+  const p = profData;
+  downloadCSV("velocity_profile.csv", "s,r[m],u[m/s],gamma_dot[1/s],eta[Pa s],tau[Pa],r_tilde,u_tilde",
+    [p.s, p.r, p.u, p.gamma, p.eta, p.tau, p.rt, p.ut].map(a => Array.from(a)));
+});
+
+/* first paint, once Plotly is available */
+whenPlotlyReady(() => $("runRheo").click());
+</script>
+</body>
+</html>
